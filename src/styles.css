@@ -1,3 +1,9 @@
+@property --widget-opacity {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: .96;
+}
+
 :root {
   font-family: "Segoe UI Variable Text", "Microsoft YaHei UI", system-ui, sans-serif;
   color-scheme: light dark;
@@ -40,6 +46,7 @@ button, input { font: inherit; }
     rgba(var(--widget-rgb), var(--widget-opacity));
   box-shadow: 0 16px 40px rgba(24, 37, 70, .19), 0 2px 8px rgba(24, 37, 70, .11);
   backdrop-filter: blur(20px) saturate(1.12);
+  transition: --widget-opacity 250ms ease;
 }
 
 .widget.collapsed { border-radius: 14px; }
@@ -277,7 +284,7 @@ button, input { font: inherit; }
 
 .empty-state { position: relative; }
 .empty-state p { margin: 4px 0 0; color: var(--text-muted); text-align: center; font-size: 10px; }
-.empty-row { display: flex; gap: 8px; height: 50px; margin-bottom: 5px; padding: 9px; border-radius: 10px; background: rgba(var(--card-rgb), .38); }
+.empty-row { display: flex; gap: 8px; height: 50px; margin-bottom: 5px; padding: 9px; border-radius: 10px; background: rgba(var(--card-rgb), calc(var(--widget-opacity) * .4)); }
 .empty-row > span { width: 20px; height: 17px; border-radius: 5px; background: color-mix(in srgb, var(--text-muted) 15%, transparent); }
 .empty-row div { flex: 1; }
 .empty-row i { display: block; height: 7px; margin-bottom: 7px; border-radius: 5px; background: color-mix(in srgb, var(--text-muted) 15%, transparent); }

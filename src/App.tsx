@@ -8,6 +8,7 @@ import {
   type UserPreferences,
   type WeeklyEvent,
 } from '../shared/types'
+import { effectiveOpacity } from './appearance'
 
 const INITIAL_STATE: FeedState = {
   latest: [], weeklyDigest: null, lastSuccessAt: null, nextRefreshAt: null,
@@ -19,6 +20,7 @@ export default function App() {
   const [state, setState] = useState(INITIAL_STATE)
   const [now, setNow] = useState(() => new Date())
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [pointerInside, setPointerInside] = useState(false)
 
   useEffect(() => {
     let mounted = true
@@ -35,7 +37,19 @@ export default function App() {
     }
   }, [])
 
-  const appearance = useMemo(() => appearanceFor(state.preferences), [state.preferences])
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (document.hidden) setPointerInside(false)
+    }
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange)
+  }, [])
+
+  const visibleOpacity = effectiveOpacity(state.preferences.opacity, pointerInside)
+  const appearance = useMemo(
+    () => appearanceFor(state.preferences, visibleOpacity),
+    [state.preferences, visibleOpacity],
+  )
   const lastUpdated = useMemo(() => relativeTime(state.lastSuccessAt, now), [state.lastSuccessAt, now])
   const weeklyLabel = useMemo(() => {
     if (!state.weeklyDigest) return '最近一个完整周'
@@ -59,7 +73,18 @@ export default function App() {
     })
   }, [])
 
-  const widgetProps = { style: appearance.style, 'data-custom-theme': appearance.theme }
+  const hideWindow = useCallback(() => {
+    setPointerInside(false)
+    void window.aiNews.hideWindow()
+  }, [])
+
+  const widgetProps = {
+    style: appearance.style,
+    'data-custom-theme': appearance.theme,
+    'data-pointer-inside': pointerInside,
+    onPointerEnter: () => setPointerInside(true),
+    onPointerLeave: () => setPointerInside(false),
+  }
 
   if (state.collapsed) {
     return (
@@ -70,7 +95,7 @@ export default function App() {
           <span className="compact-status">{state.loading ? '更新中' : lastUpdated}</span>
           <div className="window-actions">
             <button type="button" title="展开" aria-label="展开" onClick={toggleCollapsed}>⌄</button>
-            <button type="button" title="隐藏到托盘" aria-label="隐藏到托盘" onClick={() => void window.aiNews.hideWindow()}>×</button>
+            <button type="button" title="隐藏到托盘" aria-label="隐藏到托盘" onClick={hideWindow}>×</button>
           </div>
         </header>
       </main>
@@ -85,7 +110,7 @@ export default function App() {
           <button type="button" className={settingsOpen ? 'active' : ''} title="设置" aria-label="设置" aria-pressed={settingsOpen} onClick={() => setSettingsOpen((open) => !open)}>⚙</button>
           <button type="button" className={state.loading ? 'spinning' : ''} title="立即刷新" aria-label="立即刷新" disabled={state.loading} onClick={() => void window.aiNews.refreshNow()}>↻</button>
           <button type="button" title="折叠" aria-label="折叠" onClick={toggleCollapsed}>⌃</button>
-          <button type="button" title="隐藏到托盘" aria-label="隐藏到托盘" onClick={() => void window.aiNews.hideWindow()}>×</button>
+          <button type="button" title="隐藏到托盘" aria-label="隐藏到托盘" onClick={hideWindow}>×</button>
         </div>
       </header>
 
@@ -257,8 +282,8 @@ function EmptyRows({ count, label }: { count: number; label: string }) {
 
 type ThemeStyle = CSSProperties & Record<`--${string}`, string | number>
 
-function appearanceFor(preferences: UserPreferences): { style: ThemeStyle; theme?: 'light' | 'dark' } {
-  const style: ThemeStyle = { '--accent': preferences.accentColor, '--widget-opacity': preferences.opacity }
+function appearanceFor(preferences: UserPreferences, opacity: number): { style: ThemeStyle; theme?: 'light' | 'dark' } {
+  const style: ThemeStyle = { '--accent': preferences.accentColor, '--widget-opacity': opacity }
   if (!preferences.backgroundColor) return { style }
   const [red, green, blue] = hexToRgb(preferences.backgroundColor)
   const dark = (0.2126 * red + 0.7152 * green + 0.0722 * blue) / 255 < 0.53
