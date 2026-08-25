@@ -1,6 +1,7 @@
 export type Language = 'zh' | 'en' | 'other'
 export type LanguageMode = 'mixed' | 'zh' | 'en'
 export type SourceAuthority = 'official-media' | 'official-account' | 'general'
+export type ResizeDirection = 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw'
 
 export interface UserPreferences {
   languageMode: LanguageMode
@@ -84,5 +85,8 @@ export interface AINewsAPI {
   updatePreferences: (patch: Partial<UserPreferences>) => Promise<UserPreferences>
   resetAppearance: () => Promise<UserPreferences>
   resetWindowSize: () => Promise<void>
+  startResize: (direction: ResizeDirection, screenX: number, screenY: number) => void
+  updateResize: (screenX: number, screenY: number) => void
+  endResize: () => void
   notifyOnline: () => void
 }

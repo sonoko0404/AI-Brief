@@ -10,9 +10,10 @@ import {
   shell,
   Tray,
 } from 'electron'
-import type { FeedState, UserPreferences, WindowPlacement } from '../shared/types'
+import type { FeedState, ResizeDirection, UserPreferences, WindowPlacement } from '../shared/types'
 import { FeedService } from './feed-service'
 import { JsonStorage } from './storage'
+import { calculateResizeBounds, type ResizeStart } from './window-resize'
 
 const APP_ID = 'com.aikuaixun.widget'
 const DEFAULT_WIDTH = 280
@@ -27,6 +28,9 @@ let feedService: FeedService | null = null
 let storage: JsonStorage | null = null
 let quitting = false
 let boundsSaveTimer: NodeJS.Timeout | null = null
+let activeResize: ResizeStart | null = null
+
+const RESIZE_DIRECTIONS = new Set<ResizeDirection>(['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw'])
 
 const hasSingleInstanceLock = app.requestSingleInstanceLock()
 if (!hasSingleInstanceLock) {
@@ -116,6 +120,7 @@ function createWindow(placement: WindowPlacement | null, collapsed: boolean, exp
       mainWindow?.hide()
     }
   })
+  mainWindow.on('hide', endActiveResize)
   mainWindow.on('move', scheduleBoundsSave)
   mainWindow.on('resize', scheduleBoundsSave)
   mainWindow.on('closed', () => { mainWindow = null })
@@ -188,11 +193,32 @@ function registerIpc(): void {
   })
   ipcMain.handle('settings:reset-appearance', () => feedService?.resetAppearance())
   ipcMain.handle('window:reset-size', () => resetWindowSize())
+  ipcMain.on('window:resize-start', (event, direction: unknown, screenX: unknown, screenY: unknown) => {
+    if (!isMainRenderer(event.sender) || !mainWindow || feedService?.data.collapsed) return
+    if (typeof direction !== 'string' || !RESIZE_DIRECTIONS.has(direction as ResizeDirection)) return
+    if (!isFiniteCoordinate(screenX) || !isFiniteCoordinate(screenY)) return
+    activeResize = {
+      direction: direction as ResizeDirection,
+      pointerX: screenX,
+      pointerY: screenY,
+      bounds: mainWindow.getBounds(),
+    }
+  })
+  ipcMain.on('window:resize-update', (event, screenX: unknown, screenY: unknown) => {
+    if (!isMainRenderer(event.sender) || !mainWindow || !activeResize) return
+    if (!isFiniteCoordinate(screenX) || !isFiniteCoordinate(screenY)) return
+    mainWindow.setBounds(calculateResizeBounds(activeResize, screenX, screenY, MIN_WIDTH, MIN_HEIGHT), false)
+  })
+  ipcMain.on('window:resize-end', (event) => {
+    if (!isMainRenderer(event.sender)) return
+    endActiveResize()
+  })
   ipcMain.on('network:online', () => void feedService?.ensureFreshAfterWake())
 }
 
 async function toggleCollapsed(): Promise<boolean> {
   if (!mainWindow || !feedService) return false
+  endActiveResize()
   const next = !feedService.data.collapsed
   const bounds = mainWindow.getBounds()
   if (next) {
@@ -259,8 +285,25 @@ function isPlacementVisible(placement: WindowPlacement): boolean {
 }
 
 function scheduleBoundsSave(): void {
+  if (activeResize) return
   if (boundsSaveTimer) clearTimeout(boundsSaveTimer)
   boundsSaveTimer = setTimeout(() => void persistBounds(), 350)
+}
+
+function endActiveResize(): void {
+  if (!activeResize) return
+  activeResize = null
+  if (boundsSaveTimer) clearTimeout(boundsSaveTimer)
+  boundsSaveTimer = null
+  void persistBounds()
+}
+
+function isMainRenderer(sender: Electron.WebContents): boolean {
+  return Boolean(mainWindow && !mainWindow.isDestroyed() && sender === mainWindow.webContents)
+}
+
+function isFiniteCoordinate(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value)
 }
 
 async function persistBounds(): Promise<void> {

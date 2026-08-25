@@ -3,6 +3,7 @@ import {
   DEFAULT_PREFERENCES,
   type FeedState,
   type NewsItem,
+  type ResizeDirection,
   type SourceAuthority,
   type UserPreferences,
   type WeeklyEvent,
@@ -150,9 +151,51 @@ export default function App() {
           </footer>
         </div>
       )}
-      <span className="resize-grip" aria-hidden="true" />
+      <ResizeHandles />
     </main>
   )
+}
+
+const RESIZE_DIRECTIONS: ResizeDirection[] = ['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw']
+
+function ResizeHandles() {
+  const startResize = useCallback((event: React.PointerEvent<HTMLSpanElement>, direction: ResizeDirection) => {
+    if (event.button !== 0) return
+    event.preventDefault()
+    event.currentTarget.setPointerCapture(event.pointerId)
+    window.aiNews.startResize(direction, event.screenX, event.screenY)
+  }, [])
+
+  const updateResize = useCallback((event: React.PointerEvent<HTMLSpanElement>) => {
+    if (!event.currentTarget.hasPointerCapture(event.pointerId)) return
+    if ((event.buttons & 1) === 0) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+      window.aiNews.endResize()
+      return
+    }
+    window.aiNews.updateResize(event.screenX, event.screenY)
+  }, [])
+
+  const endResize = useCallback((event: React.PointerEvent<HTMLSpanElement>) => {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    }
+    window.aiNews.endResize()
+  }, [])
+
+  return <div className="resize-handles" aria-hidden="true">
+    {RESIZE_DIRECTIONS.map((direction) => (
+      <span
+        className={`resize-handle resize-${direction}`}
+        key={direction}
+        onPointerDown={(event) => startResize(event, direction)}
+        onPointerMove={updateResize}
+        onPointerUp={endResize}
+        onPointerCancel={endResize}
+        onLostPointerCapture={() => window.aiNews.endResize()}
+      />
+    ))}
+  </div>
 }
 
 function SettingsPanel({ state, updatePreferences, onClose }: {

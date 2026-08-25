@@ -16,6 +16,9 @@ const api: AINewsAPI = {
   updatePreferences: (patch) => ipcRenderer.invoke('settings:update-preferences', patch),
   resetAppearance: () => ipcRenderer.invoke('settings:reset-appearance'),
   resetWindowSize: () => ipcRenderer.invoke('window:reset-size'),
+  startResize: (direction, screenX, screenY) => ipcRenderer.send('window:resize-start', direction, screenX, screenY),
+  updateResize: (screenX, screenY) => ipcRenderer.send('window:resize-update', screenX, screenY),
+  endResize: () => ipcRenderer.send('window:resize-end'),
   notifyOnline: () => ipcRenderer.send('network:online'),
 }
 
