@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>AI News</title>
+    <item>
+      <title>OpenAI announces a new artificial intelligence model - Example News</title>
+      <link>https://example.com/openai-model?utm_source=rss</link>
+      <pubDate>Sun, 23 Aug 2026 18:00:00 GMT</pubDate>
+      <source url="https://example.com">Example News</source>
+    </item>
+    <item>
+      <title>某公司发布新一代人工智能大模型 - 示例科技</title>
+      <link>https://example.cn/ai-model</link>
+      <pubDate>Sun, 23 Aug 2026 17:00:00 GMT</pubDate>
+      <source url="https://example.cn">示例科技</source>
+    </item>
+    <item>
+      <title>Local sports team wins final - Sports Daily</title>
+      <link>https://example.com/sports</link>
+      <pubDate>Sun, 23 Aug 2026 16:00:00 GMT</pubDate>
+      <source>Sports Daily</source>
+    </item>
+    <item>
+      <title>Unsafe artificial intelligence link - Example</title>
+      <link>javascript:alert(1)</link>
+      <pubDate>Sun, 23 Aug 2026 15:00:00 GMT</pubDate>
+    </item>
+  </channel>
+</rss>
